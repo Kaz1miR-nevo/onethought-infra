@@ -1,0 +1,266 @@
+# OneThought Infrastructure - Cursor AI Rules
+
+## 🔗 Project Architecture (TWO REPOSITORIES)
+
+This is **ONE OF TWO connected repositories**:
+
+| Repository | Purpose | Location |
+|------------|---------|----------|
+| **OneThought** | Next.js application code | `/Users/kaz1mir/Documents/OneThought` |
+| **onethought-infra** (THIS) | AWS/Kubernetes infrastructure | `/Users/kaz1mir/Documents/onethought-infra` |
+
+### How They Connect:
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     OneThought (App)                            │
+│  - Next.js 14 application                                       │
+│  - React components, API routes                                 │
+│  - Supabase client integration                                  │
+│  - Dockerfile in root for container builds                      │
+│  GitHub: Kaz1miR-nevo/onepost                                   │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              │ Docker image pushed to ECR
+                              │ Helm deploys to EKS
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│              onethought-infra (THIS REPOSITORY)                 │
+│  - Terraform: AWS EKS, VPC, ECR, WAF                           │
+│  - Helm: Kubernetes deployments                                 │
+│  - values.stage.yaml / values.prod.yaml                        │
+│  - Monitoring: Grafana, Loki, Prometheus                       │
+│  GitHub: Kaz1miR-nevo/onethought-infra                         │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      Supabase (Database)                        │
+│  Stage: cgiqlvscetphwvvffdlj.supabase.co                       │
+│  Prod:  hutrzgxhgnkkkvwmlytm.supabase.co                       │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### When to Work in Each Repo:
+
+**Work in OneThought (app) when:**
+- Adding/modifying React components
+- Creating API routes
+- Changing database schema (migrations)
+- Fixing bugs in application code
+- Running local development
+
+**Work HERE (onethought-infra) when:**
+- Changing Kubernetes resources (replicas, memory, CPU)
+- Modifying AWS infrastructure (VPC, EKS, IAM)
+- Updating Helm values (environment variables, secrets)
+- Setting up monitoring/alerts
+- Deploying to stage/prod clusters
+- Scaling, networking, security configurations
+
+---
+
+## 📁 Repository Structure
+
+```
+onethought-infra/
+├── terraform/                 # AWS Infrastructure as Code
+│   ├── main.tf               # Main Terraform config
+│   ├── variables.tf          # Variable definitions
+│   ├── environments/
+│   │   ├── stage.tfvars      # Stage environment variables
+│   │   └── prod.tfvars       # Prod environment variables
+│   └── modules/              # Reusable Terraform modules
+│       ├── vpc/              # VPC, subnets, security groups
+│       ├── eks/              # EKS cluster
+│       ├── ecr/              # Container registry
+│       ├── alb-controller/   # AWS Load Balancer Controller
+│       ├── waf/              # Web Application Firewall
+│       ├── kms/              # Key Management Service
+│       └── secrets/          # AWS Secrets Manager
+│
+├── helm/
+│   └── onethought/           # Main Helm chart
+│       ├── Chart.yaml
+│       ├── values.yaml       # Default values
+│       ├── values.stage.yaml # Stage overrides (Supabase Stage)
+│       ├── values.prod.yaml  # Prod overrides (Supabase Prod)
+│       └── templates/        # Kubernetes manifests
+│
+├── k8s/
+│   └── monitoring/           # Monitoring stack configs
+│       ├── grafana-dashboard-onethought.yaml
+│       └── cluster-secret-store.yaml
+│
+├── scripts/                  # Helper scripts
+│   ├── deploy-stage.sh       # Deploy to stage
+│   ├── deploy-prod.sh        # Deploy to production
+│   ├── install-monitoring.sh # Setup Grafana/Loki/Prometheus
+│   └── kubectl-port-forward-*.sh
+│
+├── secrets.stage.yaml.example  # Template for stage secrets
+├── secrets.prod.yaml.example   # Template for prod secrets
+└── docs/                       # Documentation
+```
+
+---
+
+## 🌍 Environments
+
+### Stage Environment
+- **Purpose**: Testing, development, QA
+- **Supabase**: `cgiqlvscetphwvvffdlj.supabase.co`
+- **Git Branch**: `stage`
+- **Terraform Workspace**: `stage`
+- **K8s Namespace**: `onethought-stage`
+- **Domain**: `stage.onethought.app`
+- **Can reset**: YES
+
+### Production Environment
+- **Purpose**: Live users, real data
+- **Supabase**: `hutrzgxhgnkkkvwmlytm.supabase.co`
+- **Git Branch**: `prod`
+- **Terraform Workspace**: `prod`
+- **K8s Namespace**: `onethought-prod`
+- **Domain**: `onethought.app`
+- **Can reset**: ⚠️ NEVER
+
+---
+
+## 🚀 Common Operations
+
+### Deploy to Stage
+```bash
+cd /Users/kaz1mir/Documents/onethought-infra
+./scripts/deploy-stage.sh
+# OR manually:
+helm upgrade --install onethought ./helm/onethought \
+  -f helm/onethought/values.stage.yaml \
+  -f secrets.stage.yaml \
+  --namespace onethought-stage
+```
+
+### Deploy to Production
+```bash
+./scripts/deploy-prod.sh
+# OR manually:
+helm upgrade --install onethought ./helm/onethought \
+  -f helm/onethought/values.prod.yaml \
+  -f secrets.prod.yaml \
+  --namespace onethought-prod
+```
+
+### Apply Terraform Changes
+```bash
+cd terraform
+
+# Stage
+terraform workspace select stage
+terraform plan -var-file=environments/stage.tfvars
+terraform apply -var-file=environments/stage.tfvars
+
+# Production (CAREFUL!)
+terraform workspace select prod
+terraform plan -var-file=environments/prod.tfvars
+terraform apply -var-file=environments/prod.tfvars
+```
+
+### Port Forward for Local Testing
+```bash
+# App
+./scripts/kubectl-port-forward-app.sh
+
+# Grafana
+./scripts/kubectl-port-forward-grafana.sh
+```
+
+---
+
+## ⚠️ Safety Rules
+
+### NEVER DO:
+- ❌ Apply Terraform to prod without testing on stage first
+- ❌ Commit secrets.stage.yaml or secrets.prod.yaml to git
+- ❌ Delete production namespace without backup
+- ❌ Modify prod values without PR review
+- ❌ Scale prod to 0 replicas
+
+### ALWAYS DO:
+- ✅ Test all changes on stage first
+- ✅ Use `terraform plan` before `terraform apply`
+- ✅ Keep secrets in .gitignore
+- ✅ Review Helm diff before upgrade
+- ✅ Monitor deployments after changes
+- ✅ Document infrastructure changes
+
+---
+
+## 🔐 Secrets Management
+
+Secrets are NOT stored in git. Use:
+
+1. **Local development**: Copy example files
+   ```bash
+   cp secrets.stage.yaml.example secrets.stage.yaml
+   # Edit with real values
+   ```
+
+2. **Production**: AWS Secrets Manager
+   - Stage secrets: `onethought-stage/app-secrets`
+   - Prod secrets: `onethought-prod/app-secrets`
+
+### Required Secrets:
+- `SUPABASE_SERVICE_ROLE_KEY` - Server-side Supabase access
+- `JWT_SECRET` - Token signing
+- `DATABASE_URL` - Direct DB access (if needed)
+
+---
+
+## 📊 Monitoring
+
+### Access Grafana
+```bash
+./scripts/kubectl-port-forward-grafana.sh
+# Open http://localhost:3001
+```
+
+### Key Metrics
+- Pod CPU/Memory usage
+- Request latency (p50, p95, p99)
+- Error rates
+- Active connections
+
+### Logs (Loki)
+```bash
+# In Grafana, use Explore with Loki datasource
+{namespace="onethought-stage"} |= "error"
+```
+
+---
+
+## 🔗 Related Resources
+
+### GitHub Repositories
+- **App**: https://github.com/Kaz1miR-nevo/onepost
+- **Infra**: https://github.com/Kaz1miR-nevo/onethought-infra
+
+### Documentation
+- `docs/DEPLOYMENT_GUIDE.md` - Full deployment instructions
+- `docs/TROUBLESHOOTING.md` - Common issues and fixes
+- `docs/SECURITY_CHECKLIST.md` - Security best practices
+- `CHANGELOG_SETUP.md` - Setup history
+
+### Supabase Dashboards
+- Stage: https://supabase.com/dashboard/project/cgiqlvscetphwvvffdlj
+- Prod: https://supabase.com/dashboard/project/hutrzgxhgnkkkvwmlytm
+
+---
+
+## ❓ Questions to Ask User
+
+When starting a new chat, consider asking:
+1. "Це зміни для stage чи production?"
+2. "Чи потрібні зміни в app репозиторії також?"
+3. "Terraform чи Helm зміни?"
+4. "Чи є активні деплої зараз?"
+5. "Яка поточна версія додатку в кластері?"
+

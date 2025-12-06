@@ -1,0 +1,203 @@
+# =============================================================================
+# OneThought Helm Chart - Production Environment Values
+# =============================================================================
+# Override values for the production environment
+# Usage: helm upgrade --install onethought . -f values.prod.yaml
+# 
+# ⚠️ WARNING: This is PRODUCTION configuration!
+# - Review all changes carefully
+# - Test on stage first
+# - Use proper change management
+# =============================================================================
+
+global:
+  environment: prod
+  domain: onethought.app
+  awsRegion: eu-central-1
+
+# =============================================================================
+# Frontend (Next.js)
+# =============================================================================
+frontend:
+  replicaCount: 3
+  
+  image:
+    repository: ${AWS_ACCOUNT_ID}.dkr.ecr.eu-central-1.amazonaws.com/onethought-prod-frontend
+    tag: latest
+    pullPolicy: Always
+  
+  # Production resources - more generous
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 20
+    targetCPUUtilizationPercentage: 60
+    targetMemoryUtilizationPercentage: 70
+  
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 2
+  
+  env:
+    - name: NODE_ENV
+      value: production
+    - name: NEXT_PUBLIC_APP_ENV
+      value: prod
+    - name: NEXT_TELEMETRY_DISABLED
+      value: "1"
+    - name: NEXT_PUBLIC_SITE_URL
+      value: https://onethought.app
+  
+  # Pod anti-affinity to spread across nodes
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+                - key: app.kubernetes.io/name
+                  operator: In
+                  values:
+                    - frontend
+            topologyKey: topology.kubernetes.io/zone
+  
+  serviceAccount:
+    annotations:
+      eks.amazonaws.com/role-arn: arn:aws:iam::${AWS_ACCOUNT_ID}:role/onethought-prod-frontend
+
+# =============================================================================
+# Backend (if enabled)
+# =============================================================================
+backend:
+  enabled: false
+  replicaCount: 3
+  
+  image:
+    repository: ${AWS_ACCOUNT_ID}.dkr.ecr.eu-central-1.amazonaws.com/onethought-prod-backend
+    tag: latest
+  
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+  
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 15
+    targetCPUUtilizationPercentage: 60
+  
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 2
+
+# =============================================================================
+# Ingress
+# =============================================================================
+ingress:
+  enabled: true
+  className: alb
+  
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/healthcheck-path: /api/health
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: "10"
+    alb.ingress.kubernetes.io/healthy-threshold-count: "2"
+    alb.ingress.kubernetes.io/unhealthy-threshold-count: "2"
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/tags: Environment=prod,Application=onethought,Critical=true
+    # Certificate ARN - set after certificate creation
+    # alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:eu-central-1:${AWS_ACCOUNT_ID}:certificate/xxx
+    
+    # WAF WebACL ARN - for production
+    # alb.ingress.kubernetes.io/wafv2-acl-arn: arn:aws:wafv2:eu-central-1:${AWS_ACCOUNT_ID}:regional/webacl/onethought-prod-waf/xxx
+    
+    # Shield Advanced (if enabled)
+    # alb.ingress.kubernetes.io/shield-advanced-protection: "true"
+    
+    # Connection draining
+    alb.ingress.kubernetes.io/load-balancer-attributes: |
+      idle_timeout.timeout_seconds=60,
+      routing.http.drop_invalid_header_fields.enabled=true,
+      routing.http2.enabled=true
+  
+  hosts:
+    - host: onethought.app
+      paths:
+        - path: /
+          pathType: Prefix
+          service: frontend
+    - host: www.onethought.app
+      paths:
+        - path: /
+          pathType: Prefix
+          service: frontend
+
+# =============================================================================
+# ConfigMap
+# =============================================================================
+configMap:
+  data:
+    APP_ENV: prod
+    LOG_LEVEL: info
+    LOG_FORMAT: json
+    ENABLE_DEBUG: "false"
+    ENABLE_ANALYTICS: "true"
+
+# =============================================================================
+# Secrets
+# =============================================================================
+secrets:
+  useExternalSecrets: true
+  externalSecrets:
+    enabled: true
+    data:
+      - secretKey: SUPABASE_URL
+        remoteRef:
+          key: onethought-prod/app-secrets
+          property: SUPABASE_URL
+      - secretKey: SUPABASE_ANON_KEY
+        remoteRef:
+          key: onethought-prod/app-secrets
+          property: SUPABASE_ANON_KEY
+      - secretKey: SUPABASE_SERVICE_ROLE_KEY
+        remoteRef:
+          key: onethought-prod/app-secrets
+          property: SUPABASE_SERVICE_KEY
+      - secretKey: JWT_SECRET
+        remoteRef:
+          key: onethought-prod/app-secrets
+          property: JWT_SECRET
+
+# =============================================================================
+# Network Policies - More restrictive for production
+# =============================================================================
+networkPolicy:
+  enabled: true
+
+# =============================================================================
+# Monitoring
+# =============================================================================
+monitoring:
+  serviceMonitor:
+    enabled: true
+    interval: 15s
+    labels:
+      release: prometheus
+      environment: prod
+      critical: "true"
+

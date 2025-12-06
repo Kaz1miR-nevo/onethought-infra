@@ -1,0 +1,34 @@
+{{/*
+=============================================================================
+Pod Disruption Budgets
+=============================================================================
+*/}}
+{{- if and .Values.frontend.enabled .Values.frontend.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "onethought.fullname" . }}-frontend
+  labels:
+    {{- include "onethought.frontend.labels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.frontend.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "onethought.frontend.selectorLabels" . | nindent 6 }}
+{{- end }}
+
+---
+{{- if and .Values.backend.enabled .Values.backend.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "onethought.fullname" . }}-backend
+  labels:
+    {{- include "onethought.backend.labels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.backend.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "onethought.backend.selectorLabels" . | nindent 6 }}
+{{- end }}
+

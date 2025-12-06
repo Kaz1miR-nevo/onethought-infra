@@ -1,0 +1,341 @@
+# =============================================================================
+# OneThought Helm Chart - Default Values
+# =============================================================================
+# This file contains default values for the OneThought Helm chart.
+# Override these values in values.stage.yaml or values.prod.yaml
+# =============================================================================
+
+# Global settings
+global:
+  # Environment (stage/prod)
+  environment: stage
+  
+  # Application domain
+  domain: onethought.app
+  
+  # AWS region
+  awsRegion: eu-central-1
+  
+  # Image pull secrets
+  imagePullSecrets: []
+  
+  # Node selector for all pods
+  nodeSelector: {}
+  
+  # Tolerations for all pods
+  tolerations: []
+  
+  # Affinity for all pods
+  affinity: {}
+
+# =============================================================================
+# Frontend Configuration (Next.js SSR)
+# =============================================================================
+frontend:
+  enabled: true
+  
+  # Deployment settings
+  replicaCount: 2
+  
+  image:
+    repository: ""  # Set via --set or values.*.yaml
+    tag: latest
+    pullPolicy: IfNotPresent
+  
+  # Service configuration
+  service:
+    type: ClusterIP
+    port: 3000
+    targetPort: 3000
+  
+  # Resource limits
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  
+  # Health checks
+  livenessProbe:
+    httpGet:
+      path: /api/health
+      port: 3000
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  
+  readinessProbe:
+    httpGet:
+      path: /api/health
+      port: 3000
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+  
+  # Autoscaling
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  
+  # Pod disruption budget
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+  
+  # Environment variables from ConfigMap
+  envFrom: []
+  
+  # Additional environment variables
+  env:
+    - name: NODE_ENV
+      value: production
+    - name: NEXT_TELEMETRY_DISABLED
+      value: "1"
+  
+  # Security context
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    runAsNonRoot: true
+    fsGroup: 1000
+  
+  # Pod annotations
+  podAnnotations: {}
+  
+  # Service account
+  serviceAccount:
+    create: true
+    name: ""
+    annotations: {}
+
+# =============================================================================
+# Backend Configuration (API Service)
+# =============================================================================
+backend:
+  # For Next.js apps, backend is typically part of frontend
+  # Enable this if you have a separate backend service
+  enabled: false
+  
+  # Deployment settings
+  replicaCount: 2
+  
+  image:
+    repository: ""
+    tag: latest
+    pullPolicy: IfNotPresent
+  
+  service:
+    type: ClusterIP
+    port: 3001
+    targetPort: 3001
+  
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  
+  livenessProbe:
+    httpGet:
+      path: /healthz
+      port: 3001
+    initialDelaySeconds: 30
+    periodSeconds: 10
+  
+  readinessProbe:
+    httpGet:
+      path: /healthz
+      port: 3001
+    initialDelaySeconds: 10
+    periodSeconds: 5
+  
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+  
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+  
+  env: []
+  
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    runAsNonRoot: true
+  
+  serviceAccount:
+    create: true
+    name: ""
+    annotations: {}
+
+# =============================================================================
+# Ingress Configuration
+# =============================================================================
+ingress:
+  enabled: true
+  
+  # Ingress class - use alb for AWS ALB Ingress Controller
+  className: alb
+  
+  # Annotations for AWS ALB
+  annotations:
+    # ALB scheme - internet-facing or internal
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    
+    # Target type - ip for Fargate, instance for EC2
+    alb.ingress.kubernetes.io/target-type: ip
+    
+    # Health check settings
+    alb.ingress.kubernetes.io/healthcheck-path: /api/health
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: "15"
+    alb.ingress.kubernetes.io/healthcheck-timeout-seconds: "5"
+    alb.ingress.kubernetes.io/healthy-threshold-count: "2"
+    alb.ingress.kubernetes.io/unhealthy-threshold-count: "3"
+    
+    # SSL settings
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    
+    # Connection settings
+    alb.ingress.kubernetes.io/load-balancer-attributes: idle_timeout.timeout_seconds=60
+    
+    # Tags for the ALB
+    alb.ingress.kubernetes.io/tags: Environment=stage,Application=onethought
+  
+  # SSL certificate ARN (set in environment-specific values)
+  certificateArn: ""
+  
+  # Hosts configuration
+  hosts:
+    - host: stage.onethought.app
+      paths:
+        - path: /
+          pathType: Prefix
+          service: frontend
+  
+  # TLS configuration (handled by ALB annotations)
+  tls: []
+
+# =============================================================================
+# ConfigMap Configuration
+# =============================================================================
+configMap:
+  enabled: true
+  
+  # Application configuration
+  data:
+    # App settings
+    APP_ENV: stage
+    LOG_LEVEL: info
+    LOG_FORMAT: json
+    
+    # Feature flags
+    ENABLE_ANALYTICS: "false"
+    ENABLE_DEBUG: "false"
+
+# =============================================================================
+# Secrets Configuration
+# =============================================================================
+secrets:
+  # Use external secrets (AWS Secrets Manager)
+  useExternalSecrets: true
+  
+  # External Secrets Operator configuration
+  externalSecrets:
+    enabled: true
+    secretStoreRef:
+      name: aws-secrets-manager
+      kind: ClusterSecretStore
+    refreshInterval: 1h
+    target:
+      name: onethought-secrets
+    data:
+      - secretKey: SUPABASE_URL
+        remoteRef:
+          key: onethought-stage/app-secrets
+          property: SUPABASE_URL
+      - secretKey: SUPABASE_ANON_KEY
+        remoteRef:
+          key: onethought-stage/app-secrets
+          property: SUPABASE_ANON_KEY
+      - secretKey: JWT_SECRET
+        remoteRef:
+          key: onethought-stage/app-secrets
+          property: JWT_SECRET
+  
+  # Inline secrets (only if useExternalSecrets is false)
+  data: {}
+
+# =============================================================================
+# Network Policies
+# =============================================================================
+networkPolicy:
+  enabled: true
+  
+  # Allow ingress from ALB
+  ingressRules:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: kube-system
+      ports:
+        - protocol: TCP
+          port: 3000
+  
+  # Allow egress to Supabase and external services
+  egressRules:
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - protocol: TCP
+          port: 443
+
+# =============================================================================
+# Pod Security Standards
+# =============================================================================
+podSecurityPolicy:
+  enabled: false
+
+# =============================================================================
+# Monitoring
+# =============================================================================
+monitoring:
+  # ServiceMonitor for Prometheus
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+    path: /api/metrics
+    labels:
+      release: prometheus
+  
+  # PodMonitor for additional metrics
+  podMonitor:
+    enabled: false
+
+# =============================================================================
+# Jobs
+# =============================================================================
+jobs:
+  # Database migration job (if needed)
+  migrations:
+    enabled: false
+    image:
+      repository: ""
+      tag: latest
+    command: ["npm", "run", "migrate"]
+    backoffLimit: 3
+    ttlSecondsAfterFinished: 3600
+

@@ -1,0 +1,35 @@
+# =============================================================================
+# OneThought Helm Chart
+# =============================================================================
+# Unified Helm chart for deploying OneThought application
+# Includes frontend (Next.js) and backend services
+# =============================================================================
+
+apiVersion: v2
+name: onethought
+description: OneThought - Share one thought a day
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+
+keywords:
+  - onethought
+  - social
+  - nextjs
+  - kubernetes
+
+maintainers:
+  - name: OneThought Team
+    email: devops@onethought.app
+
+dependencies: []
+
+annotations:
+  category: Social
+  artifacthub.io/license: MIT
+  artifacthub.io/links: |
+    - name: GitHub
+      url: https://github.com/your-org/onethought
+    - name: Documentation
+      url: https://docs.onethought.app
+

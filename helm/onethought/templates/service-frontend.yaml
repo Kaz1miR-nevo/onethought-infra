@@ -1,0 +1,23 @@
+{{/*
+=============================================================================
+Frontend Service
+=============================================================================
+*/}}
+{{- if .Values.frontend.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "onethought.fullname" . }}-frontend
+  labels:
+    {{- include "onethought.frontend.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.frontend.service.type }}
+  ports:
+    - port: {{ .Values.frontend.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "onethought.frontend.selectorLabels" . | nindent 4 }}
+{{- end }}
+

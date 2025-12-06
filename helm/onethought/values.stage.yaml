@@ -1,0 +1,144 @@
+# =============================================================================
+# OneThought Helm Chart - Stage Environment Values
+# =============================================================================
+# Override values for the stage environment
+# Usage: helm upgrade --install onethought . -f values.stage.yaml
+# =============================================================================
+
+global:
+  environment: stage
+  domain: stage.onethought.app
+  awsRegion: eu-central-1
+
+# =============================================================================
+# Frontend (Next.js)
+# =============================================================================
+frontend:
+  replicaCount: 2
+  
+  image:
+    # ECR repository URL - will be set dynamically
+    repository: ${AWS_ACCOUNT_ID}.dkr.ecr.eu-central-1.amazonaws.com/onethought-stage-frontend
+    tag: latest
+    pullPolicy: Always
+  
+  # Smaller resources for stage
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+  
+  env:
+    - name: NODE_ENV
+      value: production
+    - name: NEXT_PUBLIC_APP_ENV
+      value: stage
+    - name: NEXT_TELEMETRY_DISABLED
+      value: "1"
+    - name: NEXT_PUBLIC_SITE_URL
+      value: https://stage.onethought.app
+  
+  serviceAccount:
+    annotations:
+      eks.amazonaws.com/role-arn: arn:aws:iam::${AWS_ACCOUNT_ID}:role/onethought-stage-frontend
+
+# =============================================================================
+# Backend (if enabled)
+# =============================================================================
+backend:
+  enabled: false
+  
+  image:
+    repository: ${AWS_ACCOUNT_ID}.dkr.ecr.eu-central-1.amazonaws.com/onethought-stage-backend
+    tag: latest
+  
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  
+  autoscaling:
+    minReplicas: 2
+    maxReplicas: 5
+
+# =============================================================================
+# Ingress
+# =============================================================================
+ingress:
+  enabled: true
+  className: alb
+  
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/healthcheck-path: /api/health
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/tags: Environment=stage,Application=onethought
+    # Certificate ARN - set this after creating the certificate
+    # alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:eu-central-1:${AWS_ACCOUNT_ID}:certificate/xxx
+  
+  hosts:
+    - host: stage.onethought.app
+      paths:
+        - path: /
+          pathType: Prefix
+          service: frontend
+
+# =============================================================================
+# ConfigMap
+# =============================================================================
+configMap:
+  data:
+    APP_ENV: stage
+    LOG_LEVEL: debug
+    LOG_FORMAT: json
+    ENABLE_DEBUG: "true"
+
+# =============================================================================
+# Secrets
+# =============================================================================
+secrets:
+  useExternalSecrets: true
+  externalSecrets:
+    enabled: true
+    data:
+      - secretKey: SUPABASE_URL
+        remoteRef:
+          key: onethought-stage/app-secrets
+          property: SUPABASE_URL
+      - secretKey: SUPABASE_ANON_KEY
+        remoteRef:
+          key: onethought-stage/app-secrets
+          property: SUPABASE_ANON_KEY
+      - secretKey: SUPABASE_SERVICE_ROLE_KEY
+        remoteRef:
+          key: onethought-stage/app-secrets
+          property: SUPABASE_SERVICE_KEY
+      - secretKey: JWT_SECRET
+        remoteRef:
+          key: onethought-stage/app-secrets
+          property: JWT_SECRET
+
+# =============================================================================
+# Monitoring
+# =============================================================================
+monitoring:
+  serviceMonitor:
+    enabled: true
+    labels:
+      release: prometheus
+      environment: stage
+

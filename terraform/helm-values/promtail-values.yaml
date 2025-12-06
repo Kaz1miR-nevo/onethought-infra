@@ -1,0 +1,85 @@
+# =============================================================================
+# Promtail Helm Values
+# =============================================================================
+# Configuration for Promtail log collector
+# =============================================================================
+
+config:
+  clients:
+    - url: "${loki_url}/loki/api/v1/push"
+  
+  snippets:
+    pipelineStages:
+      - cri: {}
+      - multiline:
+          firstline: '^\d{4}-\d{2}-\d{2}[T ]?\d{2}:\d{2}:\d{2}'
+          max_wait_time: 3s
+      - json:
+          expressions:
+            level: level
+            message: msg
+            timestamp: time
+      - labels:
+          level:
+      - timestamp:
+          source: timestamp
+          format: RFC3339
+    
+    extraRelabelConfigs:
+      # Add pod labels
+      - action: labelmap
+        regex: __meta_kubernetes_pod_label_(.+)
+      # Keep only specific namespaces
+      - source_labels: [__meta_kubernetes_namespace]
+        action: keep
+        regex: (onethought|monitoring|kube-system)
+      # Drop high-volume low-value logs
+      - source_labels: [__meta_kubernetes_container_name]
+        action: drop
+        regex: (istio-proxy|linkerd-proxy)
+
+# DaemonSet configuration
+daemonset:
+  enabled: true
+
+# Resources
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 256Mi
+
+# Tolerations to run on all nodes
+tolerations:
+  - key: node-role.kubernetes.io/master
+    operator: Exists
+    effect: NoSchedule
+  - key: node-role.kubernetes.io/control-plane
+    operator: Exists
+    effect: NoSchedule
+
+# Service Monitor for Prometheus
+serviceMonitor:
+  enabled: true
+  labels:
+    release: prometheus
+
+# Extra volumes for additional log sources
+extraVolumes:
+  - name: varlog
+    hostPath:
+      path: /var/log
+  - name: containers
+    hostPath:
+      path: /var/lib/docker/containers
+
+extraVolumeMounts:
+  - name: varlog
+    mountPath: /var/log
+    readOnly: true
+  - name: containers
+    mountPath: /var/lib/docker/containers
+    readOnly: true
+

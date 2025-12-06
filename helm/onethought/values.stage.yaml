@@ -46,6 +46,10 @@ frontend:
       value: "1"
     - name: NEXT_PUBLIC_SITE_URL
       value: https://stage.onethought.app
+    - name: NEXT_PUBLIC_SUPABASE_URL
+      value: https://cgiqlvscetphwvvffdlj.supabase.co
+    - name: NEXT_PUBLIC_SUPABASE_ANON_KEY
+      value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNnaXFsdnNjZXRwaHd2dmZmZGxqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4NjUyNjAsImV4cCI6MjA4MDQ0MTI2MH0.LTL9OtU4egDb1AcEMz6EOi7xFX1gPfvssxvwCr5KWlc
   
   serviceAccount:
     annotations:

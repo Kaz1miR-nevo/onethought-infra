@@ -55,6 +55,10 @@ frontend:
       value: "1"
     - name: NEXT_PUBLIC_SITE_URL
       value: https://onethought.app
+    - name: NEXT_PUBLIC_SUPABASE_URL
+      value: https://hutrzgxhgnkkkvwmlytm.supabase.co
+    - name: NEXT_PUBLIC_SUPABASE_ANON_KEY
+      value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh1dHJ6Z3hoZ25ra2t2d21seXRtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxNzk0MjIsImV4cCI6MjA3OTc1NTQyMn0.-uHcbY2SWajzmSGERasJtatfd1hbOrd0swieXGWeOA0
   
   # Pod anti-affinity to spread across nodes
   affinity:

@@ -116,65 +116,91 @@ frontend:
     annotations: {}
 
 # =============================================================================
-# Backend Configuration (API Service)
+# Backend Configuration (API Service - Fastify)
 # =============================================================================
 backend:
-  # For Next.js apps, backend is typically part of frontend
-  # Enable this if you have a separate backend service
+  # Enable backend API service (onethought-api)
+  # This is a separate Fastify REST API server
   enabled: false
   
   # Deployment settings
   replicaCount: 2
   
   image:
-    repository: ""
+    repository: ""  # Set via --set or values.*.yaml
     tag: latest
     pullPolicy: IfNotPresent
   
+  # Service configuration
   service:
     type: ClusterIP
     port: 3001
     targetPort: 3001
   
+  # Resource limits
   resources:
     requests:
-      cpu: 200m
-      memory: 512Mi
+      cpu: 100m
+      memory: 256Mi
     limits:
-      cpu: 1000m
-      memory: 1Gi
+      cpu: 500m
+      memory: 512Mi
   
+  # Health checks (API uses /health endpoint)
   livenessProbe:
     httpGet:
-      path: /healthz
+      path: /health
       port: 3001
-    initialDelaySeconds: 30
+    initialDelaySeconds: 15
     periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
   
   readinessProbe:
     httpGet:
-      path: /healthz
+      path: /ready
       port: 3001
-    initialDelaySeconds: 10
+    initialDelaySeconds: 5
     periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
   
+  # Autoscaling
   autoscaling:
     enabled: true
     minReplicas: 2
     maxReplicas: 10
     targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
   
+  # Pod disruption budget
   podDisruptionBudget:
     enabled: true
     minAvailable: 1
   
-  env: []
+  # Environment variables from ConfigMap
+  envFrom: []
   
+  # Additional environment variables
+  env:
+    - name: NODE_ENV
+      value: production
+    - name: PORT
+      value: "3001"
+    - name: LOG_LEVEL
+      value: info
+  
+  # Security context
   securityContext:
     runAsUser: 1000
     runAsGroup: 1000
     runAsNonRoot: true
+    fsGroup: 1000
   
+  # Pod annotations
+  podAnnotations: {}
+  
+  # Service account
   serviceAccount:
     create: true
     name: ""

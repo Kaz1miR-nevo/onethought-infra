@@ -56,14 +56,15 @@ frontend:
       eks.amazonaws.com/role-arn: arn:aws:iam::${AWS_ACCOUNT_ID}:role/onethought-stage-frontend
 
 # =============================================================================
-# Backend (if enabled)
+# Backend API (onethought-api - Fastify)
 # =============================================================================
 backend:
-  enabled: false
+  enabled: true
   
   image:
-    repository: ${AWS_ACCOUNT_ID}.dkr.ecr.eu-central-1.amazonaws.com/onethought-stage-backend
+    repository: ${AWS_ACCOUNT_ID}.dkr.ecr.eu-central-1.amazonaws.com/onethought-stage-api
     tag: latest
+    pullPolicy: Always
   
   resources:
     requests:
@@ -74,8 +75,30 @@ backend:
       memory: 512Mi
   
   autoscaling:
+    enabled: true
     minReplicas: 2
     maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+  
+  env:
+    - name: NODE_ENV
+      value: production
+    - name: PORT
+      value: "3001"
+    - name: LOG_LEVEL
+      value: debug
+    - name: API_VERSION
+      value: v1
+    - name: CORS_ORIGIN
+      value: https://stage.onethought.app,http://localhost:3000
+    - name: SUPABASE_URL
+      value: https://cgiqlvscetphwvvffdlj.supabase.co
+    - name: SUPABASE_ANON_KEY
+      value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNnaXFsdnNjZXRwaHd2dmZmZGxqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4NjUyNjAsImV4cCI6MjA4MDQ0MTI2MH0.LTL9OtU4egDb1AcEMz6EOi7xFX1gPfvssxvwCr5KWlc
+  
+  serviceAccount:
+    annotations:
+      eks.amazonaws.com/role-arn: arn:aws:iam::${AWS_ACCOUNT_ID}:role/onethought-stage-api
 
 # =============================================================================
 # Ingress
@@ -95,11 +118,18 @@ ingress:
     # alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:eu-central-1:${AWS_ACCOUNT_ID}:certificate/xxx
   
   hosts:
+    # Frontend (Web UI)
     - host: stage.onethought.app
       paths:
         - path: /
           pathType: Prefix
           service: frontend
+    # Backend API
+    - host: api.stage.onethought.app
+      paths:
+        - path: /
+          pathType: Prefix
+          service: backend
 
 # =============================================================================
 # ConfigMap

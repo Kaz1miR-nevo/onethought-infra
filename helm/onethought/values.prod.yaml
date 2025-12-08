@@ -79,33 +79,69 @@ frontend:
       eks.amazonaws.com/role-arn: arn:aws:iam::${AWS_ACCOUNT_ID}:role/onethought-prod-frontend
 
 # =============================================================================
-# Backend (if enabled)
+# Backend API (onethought-api - Fastify)
 # =============================================================================
 backend:
-  enabled: false
+  enabled: true
   replicaCount: 3
   
   image:
-    repository: ${AWS_ACCOUNT_ID}.dkr.ecr.eu-central-1.amazonaws.com/onethought-prod-backend
+    repository: ${AWS_ACCOUNT_ID}.dkr.ecr.eu-central-1.amazonaws.com/onethought-prod-api
     tag: latest
+    pullPolicy: Always
   
   resources:
     requests:
-      cpu: 500m
-      memory: 1Gi
+      cpu: 250m
+      memory: 512Mi
     limits:
-      cpu: 2000m
-      memory: 2Gi
+      cpu: 1000m
+      memory: 1Gi
   
   autoscaling:
     enabled: true
     minReplicas: 3
     maxReplicas: 15
     targetCPUUtilizationPercentage: 60
+    targetMemoryUtilizationPercentage: 70
   
   podDisruptionBudget:
     enabled: true
     minAvailable: 2
+  
+  env:
+    - name: NODE_ENV
+      value: production
+    - name: PORT
+      value: "3001"
+    - name: LOG_LEVEL
+      value: info
+    - name: API_VERSION
+      value: v1
+    - name: CORS_ORIGIN
+      value: https://onethought.app,https://www.onethought.app
+    - name: SUPABASE_URL
+      value: https://hutrzgxhgnkkkvwmlytm.supabase.co
+    - name: SUPABASE_ANON_KEY
+      value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh1dHJ6Z3hoZ25ra2t2d21seXRtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxNzk0MjIsImV4cCI6MjA3OTc1NTQyMn0.-uHcbY2SWajzmSGERasJtatfd1hbOrd0swieXGWeOA0
+  
+  # Pod anti-affinity to spread across nodes
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+                - key: app.kubernetes.io/name
+                  operator: In
+                  values:
+                    - backend
+            topologyKey: topology.kubernetes.io/zone
+  
+  serviceAccount:
+    annotations:
+      eks.amazonaws.com/role-arn: arn:aws:iam::${AWS_ACCOUNT_ID}:role/onethought-prod-api
 
 # =============================================================================
 # Ingress
@@ -140,6 +176,7 @@ ingress:
       routing.http2.enabled=true
   
   hosts:
+    # Frontend (Web UI)
     - host: onethought.app
       paths:
         - path: /
@@ -150,6 +187,12 @@ ingress:
         - path: /
           pathType: Prefix
           service: frontend
+    # Backend API
+    - host: api.onethought.app
+      paths:
+        - path: /
+          pathType: Prefix
+          service: backend
 
 # =============================================================================
 # ConfigMap

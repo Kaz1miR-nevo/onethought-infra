@@ -1,266 +1,267 @@
-# OneThought Infrastructure - Cursor AI Rules
+# OneThought - Multi-Project Cursor AI Rules
 
-## 🔗 Project Architecture (TWO REPOSITORIES)
+## 🏗️ MULTI-PROJECT ARCHITECTURE (3 РЕПОЗИТОРІЇ)
 
-This is **ONE OF TWO connected repositories**:
+**Ти працюєш з ЕКОСИСТЕМОЮ з 3 репозиторіїв.** Коли користувач питає щось — завжди враховуй, що зміни можуть торкатися кількох проектів.
 
-| Repository | Purpose | Location |
-|------------|---------|----------|
-| **OneThought** | Next.js application code | `/Users/kaz1mir/Documents/OneThought` |
-| **onethought-infra** (THIS) | AWS/Kubernetes infrastructure | `/Users/kaz1mir/Documents/onethought-infra` |
+### Проекти та їх розташування:
 
-### How They Connect:
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                     OneThought (App)                            │
-│  - Next.js 14 application                                       │
-│  - React components, API routes                                 │
-│  - Supabase client integration                                  │
-│  - Dockerfile in root for container builds                      │
-│  GitHub: Kaz1miR-nevo/onepost                                   │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              │ Docker image pushed to ECR
-                              │ Helm deploys to EKS
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│              onethought-infra (THIS REPOSITORY)                 │
-│  - Terraform: AWS EKS, VPC, ECR, WAF                           │
-│  - Helm: Kubernetes deployments                                 │
-│  - values.stage.yaml / values.prod.yaml                        │
-│  - Monitoring: Grafana, Loki, Prometheus                       │
-│  GitHub: Kaz1miR-nevo/onethought-infra                         │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                      Supabase (Database)                        │
-│  Stage: cgiqlvscetphwvvffdlj.supabase.co                       │
-│  Prod:  hutrzgxhgnkkkvwmlytm.supabase.co                       │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### When to Work in Each Repo:
-
-**Work in OneThought (app) when:**
-- Adding/modifying React components
-- Creating API routes
-- Changing database schema (migrations)
-- Fixing bugs in application code
-- Running local development
-
-**Work HERE (onethought-infra) when:**
-- Changing Kubernetes resources (replicas, memory, CPU)
-- Modifying AWS infrastructure (VPC, EKS, IAM)
-- Updating Helm values (environment variables, secrets)
-- Setting up monitoring/alerts
-- Deploying to stage/prod clusters
-- Scaling, networking, security configurations
+| Проект | Шлях | GitHub | Технології |
+|--------|------|--------|------------|
+| **OneThought** (WEB) | `/Users/kaz1mir/Documents/OneThought` | `Kaz1miR-nevo/onepost` | Next.js 14, React, TypeScript, Tailwind |
+| **onethought-api** (API) | `/Users/kaz1mir/Documents/onethought-api` | `Kaz1miR-nevo/onethought-api` | Node.js, Fastify, TypeScript |
+| **onethought-infra** | `/Users/kaz1mir/Documents/onethought-infra` | `Kaz1miR-nevo/onethought-infra` | Terraform, Helm, K8s, AWS |
 
 ---
 
-## 📁 Repository Structure
+## 🔄 ГІБРИДНА АРХІТЕКТУРА
+
+**Поточна архітектура — гібридна:**
+- **Web UI** використовує Server Actions (lib/actions/) для SSR
+- **API** (onethought-api) готовий для мобільних клієнтів
+- **lib/api/** — клієнтський SDK для майбутніх клієнтів
 
 ```
-onethought-infra/
-├── terraform/                 # AWS Infrastructure as Code
-│   ├── main.tf               # Main Terraform config
-│   ├── variables.tf          # Variable definitions
-│   ├── environments/
-│   │   ├── stage.tfvars      # Stage environment variables
-│   │   └── prod.tfvars       # Prod environment variables
-│   └── modules/              # Reusable Terraform modules
-│       ├── vpc/              # VPC, subnets, security groups
-│       ├── eks/              # EKS cluster
-│       ├── ecr/              # Container registry
-│       ├── alb-controller/   # AWS Load Balancer Controller
-│       ├── waf/              # Web Application Firewall
-│       ├── kms/              # Key Management Service
-│       └── secrets/          # AWS Secrets Manager
-│
-├── helm/
-│   └── onethought/           # Main Helm chart
-│       ├── Chart.yaml
-│       ├── values.yaml       # Default values
-│       ├── values.stage.yaml # Stage overrides (Supabase Stage)
-│       ├── values.prod.yaml  # Prod overrides (Supabase Prod)
-│       └── templates/        # Kubernetes manifests
-│
-├── k8s/
-│   └── monitoring/           # Monitoring stack configs
-│       ├── grafana-dashboard-onethought.yaml
-│       └── cluster-secret-store.yaml
-│
-├── scripts/                  # Helper scripts
-│   ├── deploy-stage.sh       # Deploy to stage
-│   ├── deploy-prod.sh        # Deploy to production
-│   ├── install-monitoring.sh # Setup Grafana/Loki/Prometheus
-│   └── kubectl-port-forward-*.sh
-│
-├── secrets.stage.yaml.example  # Template for stage secrets
-├── secrets.prod.yaml.example   # Template for prod secrets
-└── docs/                       # Documentation
+┌─────────────────────────────────────────────────────────────────────────┐
+│                          КЛІЄНТИ                                        │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  ┌────────────────┐    ┌────────────────┐    ┌────────────────┐        │
+│  │ OneThought     │    │ Android App    │    │  iOS App       │        │
+│  │ (Next.js Web)  │    │ (майбутній)    │    │ (майбутній)    │        │
+│  └───────┬────────┘    └───────┬────────┘    └───────┬────────┘        │
+│          │                     │                     │                  │
+│    Server Actions         REST API              REST API               │
+│          │                     │                     │                  │
+│          ▼                     └─────────┬───────────┘                  │
+│     ┌─────────┐                          │                              │
+│     │Supabase │◀─────────────────────────┤                              │
+│     │ Direct  │                          ▼                              │
+│     └─────────┘              ┌───────────────────┐                      │
+│                              │  onethought-api   │──▶ Supabase          │
+│                              │  (Fastify)        │                      │
+│                              └───────────────────┘                      │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 🌍 Environments
+## 📁 СТРУКТУРА OneThought (WEB)
 
-### Stage Environment
-- **Purpose**: Testing, development, QA
-- **Supabase**: `cgiqlvscetphwvvffdlj.supabase.co`
-- **Git Branch**: `stage`
-- **Terraform Workspace**: `stage`
-- **K8s Namespace**: `onethought-stage`
-- **Domain**: `stage.onethought.app`
-- **Can reset**: YES
-
-### Production Environment
-- **Purpose**: Live users, real data
-- **Supabase**: `hutrzgxhgnkkkvwmlytm.supabase.co`
-- **Git Branch**: `prod`
-- **Terraform Workspace**: `prod`
-- **K8s Namespace**: `onethought-prod`
-- **Domain**: `onethought.app`
-- **Can reset**: ⚠️ NEVER
+```
+/Users/kaz1mir/Documents/OneThought/
+├── app/                    # Next.js App Router (сторінки)
+│   ├── api/               # Критичні API routes (auth, upload)
+│   │   ├── auth/          # OAuth callbacks
+│   │   ├── upload-media/  # File uploads
+│   │   └── health/        # Health check
+│   ├── feed/              # Головний фід
+│   ├── profile/           # Профіль користувача
+│   ├── messages/          # Директ чати
+│   ├── notifications/     # Нотифікації
+│   ├── settings/          # Налаштування
+│   └── write/             # Створення поста
+├── components/            # React компоненти
+│   ├── ui/               # Базові UI елементи
+│   ├── layout/           # PageHeader, Navigation...
+│   └── feed/             # Компоненти фіду
+├── lib/
+│   ├── actions/          # ⚡ Server Actions (працюють з Supabase напряму)
+│   │   ├── posts.ts      # CRUD постів
+│   │   ├── reactions.ts  # Лайки, зірки
+│   │   ├── follows.ts    # Підписки
+│   │   ├── auth.ts       # Автентифікація
+│   │   └── ...
+│   ├── api/              # 🌐 REST API клієнт (для мобільних)
+│   │   ├── client.ts     # HTTP клієнт
+│   │   ├── hooks.ts      # React hooks
+│   │   └── services/     # Сервіси по доменах
+│   ├── supabase/         # SQL міграції
+│   └── i18n/             # Локалізація
+├── archive/              # 📦 Архів старого коду
+│   ├── legacy-server-actions/  # Бекап Server Actions
+│   └── legacy-api-routes/      # Бекап API routes
+├── locales/              # Переклади (en/, uk/)
+├── types/                # TypeScript типи
+├── env/                  # Environment конфіг
+└── Dockerfile
+```
 
 ---
 
-## 🚀 Common Operations
+## 📁 СТРУКТУРА onethought-api (BACKEND)
 
-### Deploy to Stage
+```
+/Users/kaz1mir/Documents/onethought-api/
+├── src/
+│   ├── config/           # Environment, Logger
+│   │   ├── env.ts        # Zod validated env
+│   │   └── logger.ts     # Pino logger
+│   ├── db/
+│   │   └── supabase.ts   # Supabase clients
+│   ├── middleware/
+│   │   ├── auth.ts       # JWT authentication
+│   │   └── error-handler.ts
+│   ├── routes/           # API routes (35 ендпоінтів)
+│   │   ├── auth.routes.ts
+│   │   ├── users.routes.ts
+│   │   ├── posts.routes.ts
+│   │   ├── feed.routes.ts
+│   │   ├── reactions.routes.ts
+│   │   ├── comments.routes.ts
+│   │   ├── notifications.routes.ts
+│   │   ├── search.routes.ts
+│   │   └── health.routes.ts
+│   ├── types/
+│   └── index.ts          # Entry point
+├── .env                  # Stage credentials (local dev)
+├── .env.stage            # Stage deployment
+├── .env.production       # Prod deployment
+├── Dockerfile
+├── docker-compose.yml
+└── package.json
+```
+
+---
+
+## 📁 СТРУКТУРА onethought-infra
+
+```
+/Users/kaz1mir/Documents/onethought-infra/
+├── terraform/             # AWS інфраструктура (EKS, ECR, ALB)
+├── helm/onethought/       # Helm chart
+│   ├── values.yaml        # Default values
+│   ├── values.stage.yaml  # Stage (backend enabled)
+│   ├── values.prod.yaml   # Prod (backend enabled)
+│   └── templates/
+│       ├── deployment-frontend.yaml
+│       ├── deployment-backend.yaml
+│       ├── service-*.yaml
+│       └── ingress.yaml
+├── scripts/
+└── k8s/monitoring/
+```
+
+---
+
+## 🎯 КОЛИ ПРАЦЮВАТИ В ЯКОМУ ПРОЕКТІ
+
+### ✅ OneThought (web):
+- Змінити UI компонент
+- Оновити сторінку / layout
+- Додати/змінити стилі (Tailwind)
+- Оновити переклади (locales/)
+- Змінити Server Action (lib/actions/)
+- Додати новий React hook
+
+### ✅ onethought-api:
+- Додати новий REST endpoint
+- Змінити бізнес-логіку API
+- Додати валідацію (Zod)
+- Пофіксити баг в API
+- Оновити Swagger документацію
+
+### ✅ onethought-infra:
+- Змінити replicas, resources
+- Додати env змінну в K8s
+- Оновити Ingress / домен
+- Налаштувати моніторинг
+- Деплой на stage/prod
+
+---
+
+## 🌍 ENVIRONMENTS & URLs
+
+| Параметр | LOCAL | STAGE | PROD |
+|----------|-------|-------|------|
+| Web UI | `localhost:3000` | `stage.onethought.app` | `onethought.app` |
+| API | `localhost:3001` | `api.stage.onethought.app` | `api.onethought.app` |
+| API Docs | `localhost:3001/docs` | - | - |
+| Supabase | Stage | `cgiqlvscetphwvvffdlj` | `hutrzgxhgnkkkvwmlytm` |
+
+---
+
+## 🔧 КЛЮЧОВІ КОМАНДИ
+
+### OneThought (web):
 ```bash
-cd /Users/kaz1mir/Documents/onethought-infra
-./scripts/deploy-stage.sh
-# OR manually:
-helm upgrade --install onethought ./helm/onethought \
-  -f helm/onethought/values.stage.yaml \
-  -f secrets.stage.yaml \
-  --namespace onethought-stage
+cd /Users/kaz1mir/Documents/OneThought
+npm run dev              # localhost:3000
+npm run build
+npm run lint
 ```
 
-### Deploy to Production
+### onethought-api:
 ```bash
-./scripts/deploy-prod.sh
-# OR manually:
-helm upgrade --install onethought ./helm/onethought \
-  -f helm/onethought/values.prod.yaml \
-  -f secrets.prod.yaml \
-  --namespace onethought-prod
+cd /Users/kaz1mir/Documents/onethought-api
+npm run dev              # localhost:3001
+npm run build
+npm run lint             # TypeScript check
 ```
 
-### Apply Terraform Changes
+### Запустити обидва локально:
 ```bash
-cd terraform
+# Terminal 1: API
+cd /Users/kaz1mir/Documents/onethought-api && npm run dev
 
-# Stage
-terraform workspace select stage
-terraform plan -var-file=environments/stage.tfvars
-terraform apply -var-file=environments/stage.tfvars
-
-# Production (CAREFUL!)
-terraform workspace select prod
-terraform plan -var-file=environments/prod.tfvars
-terraform apply -var-file=environments/prod.tfvars
+# Terminal 2: Web
+cd /Users/kaz1mir/Documents/OneThought && npm run dev
 ```
 
-### Port Forward for Local Testing
+### Тестування API:
 ```bash
-# App
-./scripts/kubectl-port-forward-app.sh
+# Health check
+curl http://localhost:3001/api/v1/health
 
-# Grafana
-./scripts/kubectl-port-forward-grafana.sh
+# Hot feed
+curl http://localhost:3001/api/v1/feed/hot
+
+# Swagger docs
+open http://localhost:3001/docs
 ```
 
 ---
 
-## ⚠️ Safety Rules
+## 📦 АРХІВ
 
-### NEVER DO:
-- ❌ Apply Terraform to prod without testing on stage first
-- ❌ Commit secrets.stage.yaml or secrets.prod.yaml to git
-- ❌ Delete production namespace without backup
-- ❌ Modify prod values without PR review
-- ❌ Scale prod to 0 replicas
+В `archive/` зберігаються старі версії коду для референсу:
+- `legacy-server-actions/` — оригінальні Server Actions
+- `legacy-api-routes/` — оригінальні Next.js API routes
 
-### ALWAYS DO:
-- ✅ Test all changes on stage first
-- ✅ Use `terraform plan` before `terraform apply`
-- ✅ Keep secrets in .gitignore
-- ✅ Review Helm diff before upgrade
-- ✅ Monitor deployments after changes
-- ✅ Document infrastructure changes
+**Не видаляй архів!** Використовуй для референсу як працювала попередня логіка.
 
 ---
 
-## 🔐 Secrets Management
+## ⚠️ ВАЖЛИВІ ПРАВИЛА
 
-Secrets are NOT stored in git. Use:
+### НІКОЛИ:
+- ❌ Не використовуй prod credentials локально
+- ❌ Не комітти секрети в git (.env файли в .gitignore)
+- ❌ Не пуш напряму в `main` branch без PR
 
-1. **Local development**: Copy example files
-   ```bash
-   cp secrets.stage.yaml.example secrets.stage.yaml
-   # Edit with real values
-   ```
-
-2. **Production**: AWS Secrets Manager
-   - Stage secrets: `onethought-stage/app-secrets`
-   - Prod secrets: `onethought-prod/app-secrets`
-
-### Required Secrets:
-- `SUPABASE_SERVICE_ROLE_KEY` - Server-side Supabase access
-- `JWT_SECRET` - Token signing
-- `DATABASE_URL` - Direct DB access (if needed)
+### ЗАВЖДИ:
+- ✅ Тестуй локально обидва сервери разом
+- ✅ Координуй зміни між проектами
+- ✅ Перевіряй TypeScript (`npm run lint`)
+- ✅ API зміни → тестувати через curl/Swagger
 
 ---
 
-## 📊 Monitoring
+## 🤖 ІНСТРУКЦІЇ ДЛЯ AI
 
-### Access Grafana
-```bash
-./scripts/kubectl-port-forward-grafana.sh
-# Open http://localhost:3001
-```
-
-### Key Metrics
-- Pod CPU/Memory usage
-- Request latency (p50, p95, p99)
-- Error rates
-- Active connections
-
-### Logs (Loki)
-```bash
-# In Grafana, use Explore with Loki datasource
-{namespace="onethought-stage"} |= "error"
-```
+1. **При зміні UI** — редагувати `OneThought/components/` та `OneThought/app/`
+2. **При зміні Server Actions** — редагувати `OneThought/lib/actions/`
+3. **При зміні REST API** — редагувати `onethought-api/src/routes/`
+4. **При зміні деплою** — редагувати `onethought-infra/helm/`
+5. **Мова відповідей** — українська
+6. **При створенні нового файлу** — дивись на існуючі для прикладу стилю
 
 ---
 
-## 🔗 Related Resources
+## 🔗 ШВИДКІ ПОСИЛАННЯ
 
-### GitHub Repositories
-- **App**: https://github.com/Kaz1miR-nevo/onepost
-- **Infra**: https://github.com/Kaz1miR-nevo/onethought-infra
-
-### Documentation
-- `docs/DEPLOYMENT_GUIDE.md` - Full deployment instructions
-- `docs/TROUBLESHOOTING.md` - Common issues and fixes
-- `docs/SECURITY_CHECKLIST.md` - Security best practices
-- `CHANGELOG_SETUP.md` - Setup history
-
-### Supabase Dashboards
-- Stage: https://supabase.com/dashboard/project/cgiqlvscetphwvvffdlj
-- Prod: https://supabase.com/dashboard/project/hutrzgxhgnkkkvwmlytm
-
----
-
-## ❓ Questions to Ask User
-
-When starting a new chat, consider asking:
-1. "Це зміни для stage чи production?"
-2. "Чи потрібні зміни в app репозиторії також?"
-3. "Terraform чи Helm зміни?"
-4. "Чи є активні деплої зараз?"
-5. "Яка поточна версія додатку в кластері?"
-
+- **Web repo:** `Kaz1miR-nevo/onepost`
+- **API repo:** `Kaz1miR-nevo/onethought-api`
+- **Infra repo:** `Kaz1miR-nevo/onethought-infra`
+- **Supabase Stage:** https://supabase.com/dashboard/project/cgiqlvscetphwvvffdlj
+- **Supabase Prod:** https://supabase.com/dashboard/project/hutrzgxhgnkkkvwmlytm

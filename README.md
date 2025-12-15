@@ -1,10 +1,103 @@
 # OneThought Infrastructure
 
-## 🏗️ Production-Ready AWS Kubernetes Infrastructure
+This repository contains deployment infrastructure for OneThought, supporting both:
+- **DigitalOcean VPS** (single server, Docker Compose) - **Current/Recommended for Beta**
+- **AWS EKS** (Kubernetes) - Future migration path
+
+---
+
+## 🚀 Quick Start: DigitalOcean VPS (Recommended for Beta)
+
+**Deploy Stage and Production on a single VPS in one day.**
+
+### Prerequisites
+- DigitalOcean account
+- Domain with DNS access
+- SSH access to VPS
+
+### One-Day Setup
+
+1. **Create Droplet** (2 vCPU / 4 GB RAM, Ubuntu 22.04)
+2. **Point DNS** to VPS IP:
+   ```
+   A    @       <VPS_IP>
+   A    stage   <VPS_IP>
+   ```
+3. **SSH and clone all repositories**:
+   ```bash
+   ssh root@<VPS_IP>
+   cd /opt
+   git clone https://github.com/Kaz1miR-nevo/onethought-infra.git
+   git clone https://github.com/Kaz1miR-nevo/onethought-api.git
+   git clone https://github.com/Kaz1miR-nevo/onepost.git OneThought
+   cd onethought-infra/deploy
+   ```
+4. **Run bootstrap scripts**:
+   ```bash
+   chmod +x scripts/*.sh
+   ./scripts/00_server_bootstrap.sh
+   ./scripts/01_install_docker.sh
+   ./scripts/02_configure_firewall.sh
+   ./scripts/03_setup_nginx.sh
+   ./scripts/04_setup_https_certbot.sh  # Prompts for domains/email
+   ```
+5. **Configure environment**:
+   ```bash
+   cd env
+   cp stage.api.env.example stage.api.env
+   cp stage.web.env.example stage.web.env
+   cp prod.api.env.example prod.api.env
+   cp prod.web.env.example prod.web.env
+   # Edit files and fill in your secrets
+   ```
+6. **Deploy**:
+   ```bash
+   cd ..
+   ./scripts/05_deploy_stage.sh
+   ./scripts/06_deploy_prod.sh
+   ```
+7. **Verify**:
+   ```bash
+   ./scripts/07_healthcheck.sh
+   curl https://stage.domain.com/api/health
+   curl https://domain.com/api/health
+   ```
+
+**Cost**: ~$29/month (Droplet + backups)
+
+### Important Notes for DevOps
+
+- **All 3 repositories must be cloned** to `/opt/` on the server:
+  - `onethought-infra` → `/opt/onethought-infra`
+  - `onethought-api` → `/opt/onethought-api`
+  - `onepost` → `/opt/OneThought` (note the directory name)
+
+- **Environment files** must be created from `.example` files and filled with real secrets
+- **Never commit** `.env` files to git
+- **Redis** is optional but recommended (configured in env files)
+- **Scripts are idempotent** - safe to run multiple times
+
+### Troubleshooting
+
+If deployment fails:
+1. Check that all repositories are cloned: `ls -la /opt/`
+2. Verify environment files exist: `ls -la /opt/onethought-infra/deploy/env/*.env`
+3. Check Docker is running: `docker ps`
+4. Review logs: `docker compose -p onethought_stage -f docker-compose.stage.yml logs`
+
+**Full Documentation**: 
+- [deploy/docs/DEPLOY_DO_VPS.md](deploy/docs/DEPLOY_DO_VPS.md) - Complete deployment guide
+- [deploy/docs/RUNBOOK.md](deploy/docs/RUNBOOK.md) - Operational procedures
+- [deploy/docs/SECRETS_AND_ENV.md](deploy/docs/SECRETS_AND_ENV.md) - Environment variables
+- [deploy/QUICK_START.md](deploy/QUICK_START.md) - Quick reference checklist
+
+---
+
+## 🏗️ AWS Kubernetes Infrastructure (Future)
 
 This directory contains the complete infrastructure-as-code for deploying OneThought on AWS EKS.
 
-> **Note**: This directory can be copied to a separate repository for production use.
+> **Note**: For beta/hobby projects, use DigitalOcean VPS above. Migrate to AWS EKS when you need auto-scaling, high availability, or enterprise features.
 
 ---
 
@@ -88,7 +181,16 @@ Secrets are stored separately:
 ## 📁 Structure
 
 ```
-infra/
+onethought-infra/
+├── deploy/                 # 🆕 DigitalOcean VPS deployment
+│   ├── docker-compose.stage.yml
+│   ├── docker-compose.prod.yml
+│   ├── env/                # Environment templates (.example files)
+│   ├── nginx/              # Nginx configurations
+│   ├── redis/              # Redis configuration
+│   ├── scripts/            # Bootstrap & deployment scripts
+│   ├── docs/              # VPS deployment documentation
+│   └── QUICK_START.md     # Quick reference
 ├── terraform/              # AWS Infrastructure (EKS, VPC, IAM, ECR)
 │   ├── environments/       # Stage and Prod tfvars
 │   │   ├── stage.tfvars    # Stage configuration
@@ -101,12 +203,13 @@ infra/
 │       └── values.prod.yaml   # Prod overrides
 ├── k8s/
 │   └── monitoring/        # Grafana, Loki, Prometheus stack
-├── scripts/               # Deployment & utility scripts
+├── scripts/               # AWS/K8s deployment scripts
 ├── ci-cd/                 # Reference CI/CD workflows
-├── docker/                # Dockerfile for the app
 ├── local/                 # Local development helpers
-└── docs/                  # Detailed documentation
+└── docs/                  # AWS/K8s documentation
 ```
+
+**Note**: For DigitalOcean VPS deployment, use files in `deploy/` directory. For AWS EKS, use `terraform/` and `helm/`.
 
 ## 🚀 Quick Start
 
@@ -326,13 +429,24 @@ Access Grafana:
 
 ## 📖 Documentation
 
+### DigitalOcean VPS (Current)
 | Document | Purpose |
 |----------|---------|
-| [DEPLOYMENT_GUIDE](docs/DEPLOYMENT_GUIDE.md) | Step-by-step deployment |
-| [LOCAL_DEVELOPMENT](docs/LOCAL_DEVELOPMENT.md) | Run without K8s |
-| [SECURITY_CHECKLIST](docs/SECURITY_CHECKLIST.md) | Security requirements |
-| [TROUBLESHOOTING](docs/TROUBLESHOOTING.md) | Common issues |
-| [HEALTH_CHECKLIST](docs/HEALTH_CHECKLIST.md) | Pre-production checklist |
+| [deploy/QUICK_START.md](deploy/QUICK_START.md) | Quick setup checklist |
+| [deploy/docs/DEPLOY_DO_VPS.md](deploy/docs/DEPLOY_DO_VPS.md) | Complete deployment guide |
+| [deploy/docs/RUNBOOK.md](deploy/docs/RUNBOOK.md) | Operational procedures |
+| [deploy/docs/SECRETS_AND_ENV.md](deploy/docs/SECRETS_AND_ENV.md) | Environment variables |
+| [deploy/docs/REDIS_USAGE_GUIDE.md](deploy/docs/REDIS_USAGE_GUIDE.md) | Redis configuration |
+| [deploy/docs/MIGRATION_FUTURE_AWS_K8S.md](deploy/docs/MIGRATION_FUTURE_AWS_K8S.md) | Future migration guide |
+
+### AWS EKS (Future)
+| Document | Purpose |
+|----------|---------|
+| [docs/DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md) | Step-by-step deployment |
+| [docs/LOCAL_DEVELOPMENT.md](docs/LOCAL_DEVELOPMENT.md) | Run without K8s |
+| [docs/SECURITY_CHECKLIST.md](docs/SECURITY_CHECKLIST.md) | Security requirements |
+| [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Common issues |
+| [docs/HEALTH_CHECKLIST.md](docs/HEALTH_CHECKLIST.md) | Pre-production checklist |
 
 ## ✅ Verification Checklist
 

@@ -1,0 +1,102 @@
+# =============================================================================
+# OneThought Stage Environment - Docker Compose
+# =============================================================================
+# Deploy with: docker compose -p onethought_stage -f docker-compose.stage.yml up -d
+# =============================================================================
+
+version: '3.8'
+
+services:
+  # Redis for caching and rate limiting
+  redis:
+    image: redis:7-alpine
+    container_name: onethought_stage_redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --save ""
+      --appendonly no
+    volumes:
+      - redis_stage_data:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    networks:
+      - onethought_stage_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    # Security: bind only to internal network
+    # No ports exposed to host
+
+  # API Backend
+  # NOTE: Clone onethought-api repo to /opt/onethought-api on the server
+  api:
+    build:
+      context: /opt/onethought-api
+      dockerfile: Dockerfile
+    container_name: onethought_stage_api
+    restart: unless-stopped
+    env_file:
+      - ./env/stage.api.env
+    environment:
+      - NODE_ENV=production
+      - REDIS_URL=redis://redis:6379/0
+      - REDIS_PREFIX=stage:
+    ports:
+      - "3001:3001"
+    networks:
+      - onethought_stage_network
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 10s
+      retries: 3
+
+  # Web Frontend
+  # NOTE: Clone OneThought repo to /opt/OneThought on the server
+  web:
+    build:
+      context: /opt/OneThought
+      dockerfile: Dockerfile
+      args:
+        - NODE_ENV=production
+        - NEXT_PUBLIC_APP_ENV=stage
+        - NEXT_PUBLIC_SITE_URL=https://stage.domain.com
+        - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+        - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+    container_name: onethought_stage_web
+    restart: unless-stopped
+    env_file:
+      - ./env/stage.web.env
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_APP_ENV=stage
+    ports:
+      - "3000:3000"
+    networks:
+      - onethought_stage_network
+    depends_on:
+      - api
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+
+networks:
+  onethought_stage_network:
+    driver: bridge
+    name: onethought_stage_network
+
+volumes:
+  redis_stage_data:
+    name: onethought_stage_redis_data
+

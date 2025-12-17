@@ -250,3 +250,4 @@ If issues persist:
 3. Check Supabase status
 4. Contact team lead if critical
 
+

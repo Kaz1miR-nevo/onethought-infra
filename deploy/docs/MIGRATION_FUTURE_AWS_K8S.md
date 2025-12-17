@@ -226,3 +226,4 @@ Consider migrating when:
 3. **Both setups can coexist** - test EKS while VPS runs
 4. **Migration is reversible** - can rollback if needed
 
+

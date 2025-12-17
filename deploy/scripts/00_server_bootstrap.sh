@@ -57,3 +57,4 @@ echo "3. Run: ./03_setup_nginx.sh"
 echo "4. Run: ./04_setup_https_certbot.sh"
 echo "5. Copy env files and run deploy scripts"
 
+

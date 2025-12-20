@@ -58,3 +58,5 @@ echo "4. Run: ./04_setup_https_certbot.sh"
 echo "5. Copy env files and run deploy scripts"
 
 
+
+

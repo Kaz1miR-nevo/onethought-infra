@@ -61,3 +61,5 @@ echo "   docker compose -p onethought_<env> -f docker-compose.<env>.yml pull"
 echo "   docker compose -p onethought_<env> -f docker-compose.<env>.yml up -d"
 
 
+
+

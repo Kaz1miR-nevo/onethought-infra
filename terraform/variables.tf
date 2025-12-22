@@ -130,7 +130,7 @@ variable "github_repo" {
 variable "domain_name" {
   description = "Primary domain name for the application"
   type        = string
-  default     = "onethought.app"
+  default     = "birka.one"
 }
 
 variable "hosted_zone_id" {

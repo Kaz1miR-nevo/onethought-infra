@@ -60,7 +60,7 @@ github_org  = "your-org"
 github_repo = "onethought"
 
 # Domain
-domain_name    = "onethought.app"
+domain_name    = "birka.one"
 hosted_zone_id = ""  # Set this to your Route53 hosted zone ID
 
 # WAF - More restrictive in production

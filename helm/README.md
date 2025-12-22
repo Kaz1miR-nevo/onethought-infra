@@ -50,7 +50,7 @@ helm upgrade --install onethought ./onethought \
 | Parameter | Description | Default |
 |-----------|-------------|---------|
 | `global.environment` | Environment name | `stage` |
-| `global.domain` | Application domain | `onethought.app` |
+| `global.domain` | Application domain | `birka.one` |
 | `frontend.enabled` | Enable frontend deployment | `true` |
 | `frontend.replicaCount` | Initial replica count | `2` |
 | `frontend.autoscaling.enabled` | Enable HPA | `true` |

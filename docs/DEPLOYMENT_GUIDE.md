@@ -37,7 +37,7 @@ Review and update `environments/stage.tfvars`:
 # Update these values
 github_org  = "your-github-org"
 github_repo = "onethought"
-domain_name = "onethought.app"
+domain_name = "birka.one"
 ```
 
 ### 1.3 Plan and Apply

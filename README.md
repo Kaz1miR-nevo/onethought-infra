@@ -111,7 +111,7 @@ This directory contains the complete infrastructure-as-code for deploying OneTho
 | **VPC CIDR** | `10.0.0.0/16` | `10.1.0.0/16` |
 | **ECR Repository** | `onethought-stage-frontend` | `onethought-prod-frontend` |
 | **AWS Secrets** | `onethought-stage/app-secrets` | `onethought-prod/app-secrets` |
-| **Domain** | `stage.onethought.app` | `onethought.app` |
+| **Domain** | `stage.onethought.app` | `birka.one` |
 | **IAM Role (GitHub)** | `onethought-stage-github-actions` | `onethought-prod-github-actions` |
 | **Terraform Workspace** | `stage` | `prod` |
 | **Helm Values** | `values.stage.yaml` | `values.prod.yaml` |
@@ -374,7 +374,7 @@ NEXT_PUBLIC_APP_ENV=stage
 | Environment | Branch/Trigger | Terraform Workspace | EKS Cluster | Domain |
 |-------------|----------------|---------------------|-------------|--------|
 | Stage | Push to `main` | `stage` | `onethought-stage-eks` | stage.onethought.app |
-| Production | GitHub Release | `prod` | `onethought-prod-eks` | onethought.app |
+| Production | GitHub Release | `prod` | `onethought-prod-eks` | birka.one |
 
 ## 📦 Required Secrets (Per Environment)
 

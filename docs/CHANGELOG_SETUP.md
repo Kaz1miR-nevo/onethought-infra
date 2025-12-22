@@ -12,7 +12,7 @@
 | **VPC CIDR** | `10.0.0.0/16` | `10.1.0.0/16` | ✅ Різні |
 | **ECR Repository** | `onethought-stage-frontend` | `onethought-prod-frontend` | ✅ Різні |
 | **AWS Secrets** | `onethought-stage/app-secrets` | `onethought-prod/app-secrets` | ✅ Різні |
-| **Domain** | `stage.onethought.app` | `onethought.app` | ✅ Різні |
+| **Domain** | `stage.onethought.app` | `birka.one` | ✅ Різні |
 | **IAM Role (GitHub)** | `onethought-stage-github-actions` | `onethought-prod-github-actions` | ✅ Різні |
 | **Terraform Workspace** | `stage` | `prod` | ✅ Різні |
 | **Helm Values** | `values.stage.yaml` | `values.prod.yaml` | ✅ Різні |

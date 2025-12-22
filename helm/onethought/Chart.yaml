@@ -20,7 +20,7 @@ keywords:
 
 maintainers:
   - name: OneThought Team
-    email: devops@onethought.app
+    email: devops@birka.one
 
 dependencies: []
 
@@ -31,5 +31,5 @@ annotations:
     - name: GitHub
       url: https://github.com/your-org/onethought
     - name: Documentation
-      url: https://docs.onethought.app
+      url: https://docs.birka.one
 

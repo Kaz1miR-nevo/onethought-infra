@@ -11,7 +11,7 @@ global:
   environment: stage
   
   # Application domain
-  domain: onethought.app
+  domain: birka.one
   
   # AWS region
   awsRegion: eu-central-1

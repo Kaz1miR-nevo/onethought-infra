@@ -64,3 +64,4 @@ echo "   docker compose -p onethought_<env> -f docker-compose.<env>.yml up -d"
 
 
 
+

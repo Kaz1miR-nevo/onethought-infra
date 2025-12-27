@@ -12,6 +12,7 @@ See [QUICK_START.md](QUICK_START.md) for a step-by-step checklist.
 deploy/
 ├── docker-compose.stage.yml    # Stage environment compose file
 ├── docker-compose.prod.yml      # Production environment compose file
+├── docker-compose.vps.yml      # VPS deployment compose file (moved from WEB repo)
 ├── env/                         # Environment variable templates
 │   ├── stage.api.env.example   # Copy to stage.api.env and fill
 │   ├── stage.web.env.example   # Copy to stage.web.env and fill
@@ -25,6 +26,15 @@ deploy/
 │       ├── gzip.conf
 │       ├── rate-limit.conf
 │       └── websocket.conf
+├── vps/                         # VPS-specific deployment files (moved from WEB repo)
+│   ├── nginx/                  # VPS nginx configuration
+│   │   └── onethought.conf
+│   ├── scripts/                 # VPS deployment scripts
+│   │   ├── deploy.sh
+│   │   ├── setup-server.sh
+│   │   ├── backup.sh
+│   │   └── update-ssl.sh
+│   └── *.md                    # VPS deployment documentation
 ├── redis/                       # Redis configuration
 │   └── redis.conf
 ├── scripts/                     # Deployment scripts

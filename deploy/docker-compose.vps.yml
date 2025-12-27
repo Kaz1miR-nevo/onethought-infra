@@ -1,0 +1,122 @@
+# =============================================================================
+# OneThought VPS Docker Compose Configuration
+# =============================================================================
+# Для хостингу на HostIQ kVPS50 (4GB RAM, 50GB SSD)
+# Використовується для production deployment
+# 
+# NOTE: This file was moved from WEB repo to INFRA repo as part of
+# repository boundaries cleanup (see REPO_BOUNDARIES_AUDIT.md)
+# =============================================================================
+
+version: '3.8'
+
+services:
+  # ===========================================================================
+  # OneThought Web Application (Next.js)
+  # ===========================================================================
+  web:
+    build:
+      context: /opt/OneThought
+      dockerfile: Dockerfile
+      args:
+        NODE_ENV: production
+        NEXT_PUBLIC_APP_ENV: production
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://birka.one}
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+    container_name: onethought-web
+    restart: unless-stopped
+    environment:
+      # Supabase
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - DATABASE_URL=${DATABASE_URL}
+      
+      # Application
+      - NODE_ENV=production
+      - NEXT_PUBLIC_APP_ENV=production
+      - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL:-https://birka.one}
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      
+      # Logging
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    ports:
+      - "127.0.0.1:3000:3000"  # Тільки локальний доступ, nginx буде проксувати
+    networks:
+      - onethought-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'      # 50% від 4 CPU
+          memory: 2G       # 50% від 4GB RAM
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # ===========================================================================
+  # OneThought API (Fastify)
+  # ===========================================================================
+  api:
+    build:
+      context: /opt/onethought-api
+      dockerfile: Dockerfile
+    container_name: onethought-api
+    restart: unless-stopped
+    environment:
+      # Supabase
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      
+      # Application
+      - NODE_ENV=production
+      - PORT=3001
+      - HOST=0.0.0.0
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      
+      # CORS
+      - CORS_ORIGIN=${NEXT_PUBLIC_SITE_URL:-https://birka.one}
+    ports:
+      - "127.0.0.1:3001:3001"  # Тільки локальний доступ
+    networks:
+      - onethought-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'      # 37.5% від 4 CPU
+          memory: 1.5G     # 37.5% від 4GB RAM
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    depends_on:
+      web:
+        condition: service_started
+
+networks:
+  onethought-network:
+    driver: bridge
+    name: onethought-network
+
+# =============================================================================
+# Volumes (для майбутнього використання - логи, резервні копії)
+# =============================================================================
+volumes:
+  # logs:
+  #   driver: local
+  # backups:
+  #   driver: local
+

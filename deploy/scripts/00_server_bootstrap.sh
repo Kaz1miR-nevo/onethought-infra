@@ -62,3 +62,8 @@ echo "5. Copy env files and run deploy scripts"
 
 
 
+
+
+
+
+
